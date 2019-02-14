@@ -94,7 +94,9 @@ def mobilenet_retinanet(num_classes, backbone='mobilenet224_1.0', inputs=None, m
     # choose default input
     if inputs is None:
         inputs = keras.layers.Input((None, None, 3))
-
+    elif isinstance(inputs, tuple):
+        inputs = keras.layers.Input(inputs)
+        
     backbone = mobilenet.MobileNet(input_tensor=inputs, alpha=alpha, include_top=False, pooling=None, weights=None)
 
     # create the full model

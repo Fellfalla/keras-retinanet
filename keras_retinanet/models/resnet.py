@@ -93,7 +93,9 @@ def resnet_retinanet(num_classes, backbone='resnet50', inputs=None, modifier=Non
             inputs = keras.layers.Input(shape=(3, None, None))
         else:
             inputs = keras.layers.Input(shape=(None, None, 3))
-
+    elif isinstance(inputs, tuple):
+        inputs = keras.layers.Input(inputs)
+        
     # create the resnet backbone
     if backbone == 'resnet50':
         resnet = keras_resnet.models.ResNet50(inputs, include_top=False, freeze_bn=True)

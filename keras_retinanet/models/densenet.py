@@ -85,6 +85,8 @@ def densenet_retinanet(num_classes, backbone='densenet121', inputs=None, modifie
     # choose default input
     if inputs is None:
         inputs = keras.layers.Input((None, None, 3))
+    elif isinstance(inputs, tuple):
+        inputs = keras.layers.Input(inputs)
 
     blocks, creator = allowed_backbones[backbone]
     model = creator(input_tensor=inputs, include_top=False, pooling=None, weights=None)
