@@ -44,7 +44,7 @@ class Generator(keras.utils.Sequence):
         self,
         transform_generator = None,
         batch_size=1,
-        group_method='ratio',  # one of 'none', 'random', 'ratio'
+        group_method='random',  # one of 'none', 'random', 'ratio'
         shuffle_groups=True,
         image_min_side=800,
         image_max_side=1333,
@@ -52,33 +52,36 @@ class Generator(keras.utils.Sequence):
         compute_anchor_targets=anchor_targets_bbox,
         compute_shapes=guess_shapes,
         preprocess_image=preprocess_image,
+        filter_annotations_enabled=True,
         config=None
     ):
         """ Initialize Generator object.
 
         Args
-            transform_generator    : A generator used to randomly transform images and annotations.
-            batch_size             : The size of the batches to generate.
-            group_method           : Determines how images are grouped together (defaults to 'ratio', one of ('none', 'random', 'ratio')).
-            shuffle_groups         : If True, shuffles the groups each epoch.
-            image_min_side         : After resizing the minimum side of an image is equal to image_min_side.
-            image_max_side         : If after resizing the maximum side is larger than image_max_side, scales down further so that the max side is equal to image_max_side.
-            transform_parameters   : The transform parameters used for data augmentation.
-            compute_anchor_targets : Function handler for computing the targets of anchors for an image and its annotations.
-            compute_shapes         : Function handler for computing the shapes of the pyramid for a given input.
-            preprocess_image       : Function handler for preprocessing an image (scaling / normalizing) for passing through a network.
+            transform_generator             : A generator used to randomly transform images and annotations.
+            batch_size                      : The size of the batches to generate.
+            group_method                    : Determines how images are grouped together (defaults to 'ratio', one of ('none', 'random', 'ratio')).
+            shuffle_groups                  : If True, shuffles the groups each epoch.
+            image_min_side                  : After resizing the minimum side of an image is equal to image_min_side.
+            image_max_side                  : If after resizing the maximum side is larger than image_max_side, scales down further so that the max side is equal to image_max_side.
+            transform_parameters            : The transform parameters used for data augmentation.
+            compute_anchor_targets          : Function handler for computing the targets of anchors for an image and its annotations.
+            compute_shapes                  : Function handler for computing the shapes of the pyramid for a given input.
+            preprocess_image                : Function handler for preprocessing an image (scaling / normalizing) for passing through a network.
+            filter_annotations_enabled      : True for removing bounding boxed bigger than image or with zero size
         """
-        self.transform_generator    = transform_generator
-        self.batch_size             = int(batch_size)
-        self.group_method           = group_method
-        self.shuffle_groups         = shuffle_groups
-        self.image_min_side         = image_min_side
-        self.image_max_side         = image_max_side
-        self.transform_parameters   = transform_parameters or TransformParameters()
-        self.compute_anchor_targets = compute_anchor_targets
-        self.compute_shapes         = compute_shapes
-        self.preprocess_image       = preprocess_image
-        self.config                 = config
+        self.transform_generator            = transform_generator
+        self.batch_size                     = int(batch_size)
+        self.group_method                   = group_method
+        self.shuffle_groups                 = shuffle_groups
+        self.image_min_side                 = image_min_side
+        self.image_max_side                 = image_max_side
+        self.transform_parameters           = transform_parameters or TransformParameters()
+        self.compute_anchor_targets         = compute_anchor_targets
+        self.compute_shapes                 = compute_shapes
+        self.preprocess_image               = preprocess_image
+        self.filter_annotations_enabled     = filter_annotations_enabled
+        self.config                         = config
 
         # Define groups
         self.group_images()
@@ -302,8 +305,9 @@ class Generator(keras.utils.Sequence):
         image_group       = self.load_image_group(group)
         annotations_group = self.load_annotations_group(group)
 
-        # check validity of annotations
-        image_group, annotations_group = self.filter_annotations(image_group, annotations_group, group)
+        if self.filter_annotations_enabled:
+            # check validity of annotations
+            image_group, annotations_group = self.filter_annotations(image_group, annotations_group, group)
 
         # randomly transform data
         image_group, annotations_group = self.random_transform_group(image_group, annotations_group)
