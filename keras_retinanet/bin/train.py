@@ -433,6 +433,9 @@ def main(args=None):
     # optionally choose specific GPU
     if args.gpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
+    if args.multi_gpu == 0:
+        os.environ['CUDA_VISIBLE_DEVICES'] = ""
+
     keras.backend.tensorflow_backend.set_session(get_session())
 
     # optionally load config parameters
