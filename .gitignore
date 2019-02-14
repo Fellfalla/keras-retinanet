@@ -4,3 +4,9 @@ __pycache__/
 *.so
 /.pytest_cache
 /.cache
+
+*.eggs/
+*.egg-info/
+*.vscode/
+build/
+*logs/
