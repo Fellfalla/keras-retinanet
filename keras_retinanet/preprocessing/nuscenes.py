@@ -41,9 +41,10 @@ class NuscenesGenerator(Generator):
         nusc,
         scene_indices=None,
         channels=[1,2,3],
+        category_mapping=None,
         **kwargs
     ):
-        """ Initialize a KITTI data generator.
+        """ Initialize a nuScenes data generator.
 
         Args
             nusc: Object pointing at a nuscenes database
@@ -78,7 +79,7 @@ class NuscenesGenerator(Generator):
         self.camera_sensors = ['CAM_FRONT']
         self.labels = {}
         self.image_data = dict()
-        self.classes = self._get_class_label_mapping()
+        self.classes, self.labels = self._get_class_label_mapping(category_mapping)
         self.channels = channels
         self.normalize = False
 
@@ -87,10 +88,6 @@ class NuscenesGenerator(Generator):
             # Installing vizdom is required
             from raw_data_fusion.fusion_projection_lines import imageplus_creation
             self.image_plus_creation = imageplus_creation
-
-        # Fill Labels
-        for name, label in self.classes.items():
-            self.labels[label] = name
 
         # Create all sample tokens
         self.sample_tokens = {}
@@ -108,21 +105,60 @@ class NuscenesGenerator(Generator):
 
 
         # Create all annotations and put into image_data
-        for image_index, sample_token in self.sample_tokens.items():
-            self.image_data[image_index] = None #self.load_labels(sample_token, self.camera_sensors)
+        self.image_data = {image_index:None for image_index in self.sample_tokens}
 
         # Finalize
         super(NuscenesGenerator, self).__init__(**kwargs)
 
 
-    def _get_class_label_mapping(self):
+    def _get_class_label_mapping(self, category_mapping):
         """
-        :param nusc: [Nuscenes] The nuscenes dataset object
-        :returns: [dict of (str, int)] mapping from category name to the corresponding index-number
+        :param category_mapping: [dict] Map from original name to target name. Subsets of names are supported. 
+            e.g. {'pedestrian' : 'pedestrian'} will map all pedestrian types to the same label
+
+        :returns: 
+            [0]: [dict of (str, int)] mapping from category name to the corresponding index-number
+            [1]: [dict of (int, str)] mapping from index number to category name
         """
-        category_indices = {c['name']: i for i, c in enumerate(self.nusc.category)}
-        category_indices['bg'] = len(category_indices)
-        return category_indices
+        # Initialize local variables
+        original_name_to_label = {}
+        original_category_names = [c['name'] for c in self.nusc.category]
+        original_category_names.append('bg')
+        if category_mapping is None:
+            # Create identity mapping and ignore no class
+            category_mapping = dict()
+            for c in self.nusc.category:
+                category_mapping[c['name']] = c['name']
+
+        # List of unique class_names
+        selected_category_names = set(category_mapping.values())
+      
+        # Create the label to class_name mapping
+        label_to_name = { label:name for label, name in enumerate(selected_category_names)}
+        label_to_name[len(label_to_name)] = 'bg' # Add the background class
+
+        # Create original class name to label mapping
+        for label, label_name in label_to_name.items():
+
+            # Looking for all the original names that are adressed by label name
+            targets = [original_name for original_name in original_category_names if label_name in original_name]
+
+            # Assigning the same label for all adressed targets
+            for target in targets:
+                
+                # Check for ambiguity
+                assert target not in original_name_to_label.keys(), 'ambigous mapping found for (%s->%s)'%(target, label_name)
+                
+                # Assign label to original name
+                # Some label_names will have the same label, which is totally fine
+                original_name_to_label[target] = label
+
+        # Check for correctness
+        actual_labels = original_name_to_label.values()
+        expected_labels = range(0, max(actual_labels)+1) # we want to start labels at 0
+        assert all([label in actual_labels for label in expected_labels]), 'Expected labels do not match actual labels'
+
+        return original_name_to_label, label_to_name
 
     def _image_plus_enabled(self):
         r = 1 in self.channels
@@ -138,7 +174,7 @@ class NuscenesGenerator(Generator):
     def num_classes(self):
         """ Number of classes in the dataset.
         """
-        return len(self.classes)
+        return len(self.labels)
 
     def has_label(self, label):
         """ Return True if label is a known label.
@@ -307,19 +343,22 @@ class NuscenesGenerator(Generator):
             _, boxes, camera_intrinsic = self.nusc.get_sample_data(sd_rec['token'], box_vis_level=BoxVisibility.ANY)
             imsize = (sd_rec['height'], sd_rec['width'])
             
-            category_indices = self._get_class_label_mapping()
             # Create labels for all boxes that are visible
             for box in boxes:
 
-                 # Add labels to boxes 
-                box.label = category_indices[box.name]
+                # Add labels to boxes 
+                if box.name in self.classes:
+                    box.label = self.classes[box.name]
 
-                # Check if box is visible and transform box to 1D vector
-                if box_in_image(box=box, intrinsic=camera_intrinsic, imsize=imsize, vis_level=BoxVisibility.ANY):
-                    # If visible, we create the corresponding label
-                    # normalize=True, because we usually resize the image anyways
-                    box2d = box.box2d(camera_intrinsic, imsize=imsize, normalize=True)
-                    labels.append([*box2d, box.label])
+                    # Check if box is visible and transform box to 1D vector
+                    if box_in_image(box=box, intrinsic=camera_intrinsic, imsize=imsize, vis_level=BoxVisibility.ANY):
+                        # If visible, we create the corresponding label
+                        # normalize=True, because we usually resize the image anyways
+                        box2d = box.box2d(camera_intrinsic, imsize=imsize, normalize=True)
+                        labels.append([*box2d, box.label])
+                else:
+                    # The current name has been ignored
+                    pass
 
         return labels
 

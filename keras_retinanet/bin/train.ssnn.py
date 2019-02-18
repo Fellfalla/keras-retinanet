@@ -255,18 +255,31 @@ def create_generators(args, preprocess_image):
         from keras_retinanet.preprocessing.nuscenes import NuscenesGenerator 
         from nuscenes_utils.nuscenes import NuScenes
 
+        category_mapping = {
+        "vehicle.car" : "vehicle.car",
+        "vehicle.motorcycle" : "vehicle.motorcycle",
+        "vehicle.bicycle" : "vehicle.bicycle",
+        "vehicle.bus" : "vehicle.bus",
+        "vehicle.truck" : "vehicle.truck",
+        "vehicle.emergency" : "vehicle.truck",
+        "vehicle.trailer" : "vehicle.trailer",
+        "human" : "human",
+        }
+
         nusc = NuScenes(version='v0.1', dataroot=args.dataset_path, verbose=True)
         split_index = int(0.9 * len(nusc.scene))
         train_generator = NuscenesGenerator(
             nusc,
             scene_indices=range(0,split_index),
             transform_generator=transform_generator,
+            # category_mapping=category_mapping,
             **common_args
         )
 
         validation_generator = NuscenesGenerator(
             nusc,
             scene_indices=range(split_index, len(nusc.scene)),
+            category_mapping=category_mapping,
             **common_args
         )
 
