@@ -89,17 +89,15 @@ class NuscenesGenerator(Generator):
             from raw_data_fusion.fusion_projection_lines import imageplus_creation
             self.image_plus_creation = imageplus_creation
 
-        # # Fill Labels
-        # for name, label in self.classes.items():
-        #     self.labels[label] = name
-
         # Create all sample tokens
-        self.sample_tokens = []
+        self.sample_tokens = {}
+        image_index = 0
         for scene_index in scene_indices:
             # iterate the samples in scene_rec
             sample_token = self.nusc.scene[scene_index]['first_sample_token']
             while sample_token is not '':
-                self.sample_tokens.append(sample_token)
+                self.sample_tokens[image_index] = sample_token
+                image_index += 1
 
                 # get the next token
                 sample = self.nusc.get('sample', sample_token)
@@ -107,9 +105,7 @@ class NuscenesGenerator(Generator):
 
 
         # Create all annotations and put into image_data
-        # TODO: Add lazyness
-        for sample_token in self.sample_tokens:
-            self.image_data[sample_token] = self.load_labels(sample_token, self.camera_sensors)
+        self.image_data = {image_index:None for image_index in self.sample_tokens}
 
         # Finalize
         super(NuscenesGenerator, self).__init__(**kwargs)
@@ -345,7 +341,7 @@ class NuscenesGenerator(Generator):
 
             # Create Boxes:
             _, boxes, camera_intrinsic = self.nusc.get_sample_data(sd_rec['token'], box_vis_level=BoxVisibility.ANY)
-            imsize = (sd_rec['width'], sd_rec['height'])
+            imsize = (sd_rec['height'], sd_rec['width'])
             
             # Create labels for all boxes that are visible
             for box in boxes:
@@ -357,6 +353,7 @@ class NuscenesGenerator(Generator):
                     # Check if box is visible and transform box to 1D vector
                     if box_in_image(box=box, intrinsic=camera_intrinsic, imsize=imsize, vis_level=BoxVisibility.ANY):
                         # If visible, we create the corresponding label
+                        # normalize=True, because we usually resize the image anyways
                         box2d = box.box2d(camera_intrinsic, imsize=imsize, normalize=True)
                         labels.append([*box2d, box.label])
                 else:
@@ -368,8 +365,12 @@ class NuscenesGenerator(Generator):
     def load_annotations(self, image_index):
         """ Load annotations for an image_index.
         """
-        sample_token = self.sample_tokens[image_index]
-        image_data = self.image_data[sample_token]
+        image_data = self.image_data[image_index]
+
+        if image_data is None:
+            sample_token = self.sample_tokens[image_index]
+            image_data = self.load_labels(sample_token, self.camera_sensors)
+            self.image_data[image_index] = image_data
 
         annotations = {'labels': np.empty((len(image_data),)), 'bboxes': np.empty((len(image_data), 4))}
 

@@ -272,7 +272,7 @@ def create_generators(args, preprocess_image):
             nusc,
             scene_indices=range(0,split_index),
             transform_generator=transform_generator,
-            # category_mapping=category_mapping,
+            category_mapping=category_mapping,
             **common_args
         )
 
