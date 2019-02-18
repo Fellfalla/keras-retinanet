@@ -230,7 +230,7 @@ def create_generators(args, preprocess_image):
         'image_max_side'            : args.image_max_side,
         'filter_annotations_enabled': False,
         'preprocess_image'          : preprocess_image,
-        'channels'                  : [1, 2, 3]#, 4, 8, 11, 12]
+        'channels'                  : [int(ch) for ch in args.channels.split(",")] #[1, 2, 3]#, 4, 8, 11, 12]
     }
 
     # create random transform generator for augmenting training data
@@ -459,6 +459,8 @@ def parse_args(args):
     parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=640)
     parser.add_argument('--config',           help='Path to a configuration parameters .ini file.')
     parser.add_argument('--weighted-average', help='Compute the mAP using the weighted average of precisions among classes.', action='store_true')
+    
+    parser.add_argument('--channels', default="1,2,3,4,8,11,12", help='Defines which image_plus channels to use', type=str)
 
     # Fit generator arguments
     parser.add_argument('--workers', help='Number of multiprocessing workers. To disable multiprocessing, set workers to 0', type=int, default=0)
