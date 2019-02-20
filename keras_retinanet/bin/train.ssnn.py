@@ -252,8 +252,8 @@ def create_generators(args, preprocess_image):
 
     if args.dataset_type == 'nuscenes':
         # import here to prevent unnecessary dependency on nuscenes
-        from keras_retinanet.preprocessing.nuscenes import NuscenesGenerator 
-        from nuscenes_utils.nuscenes import NuScenes
+        from ..preprocessing.nuscenes import NuscenesGenerator 
+        from nuscenes.nuscenes import NuScenes
 
         category_mapping = {
         "vehicle.car" : "vehicle.car",
@@ -473,6 +473,7 @@ def main(args=None):
     # parse arguments
     if args is None:
         args = sys.argv[1:]
+    print(args)
     args = parse_args(args)
 
     # create object that stores backbone information

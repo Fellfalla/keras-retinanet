@@ -24,10 +24,9 @@ from PIL import Image
 
 # Local Libraries
 from .generator import Generator
-from nuscenes_utils.nuscenes import NuScenes
-from nuscenes_utils.data_classes import PointCloud, Box
-from nuscenes_utils.geometry_utils import box_in_image, view_points, BoxVisibility
-
+from nuscenes.nuscenes import NuScenes
+from nuscenes.utils.data_classes import RadarPointCloud, Box
+from nuscenes.utils.geometry_utils import box_in_image, view_points, BoxVisibility
 
 class NuscenesGenerator(Generator):
     """ Generate data for a nuScenes dataset.
@@ -284,8 +283,8 @@ class NuscenesGenerator(Generator):
 
         # Read the data
         if "RADAR" in sensor_channel:
-            points = PointCloud.load_pcd_bin(file_name)  # Load radar points
-            data = points.astype(self.DATATYPE)
+            pc = RadarPointCloud.from_file(file_name)  # Load radar points
+            data = pc.points.astype(self.DATATYPE)
         elif "CAM" in sensor_channel:
             i = Image.open(file_name)
 
