@@ -130,8 +130,10 @@ class NuscenesGenerator(Generator):
                 category_mapping[c['name']] = c['name']
 
         # List of unique class_names
-        selected_category_names = set(category_mapping.values())
-      
+        selected_category_names = set(category_mapping.values()) # unordered
+        selected_category_names = list(selected_category_names)
+        selected_category_names.sort() # ordered
+
         # Create the label to class_name mapping
         label_to_name = { label:name for label, name in enumerate(selected_category_names)}
         label_to_name[len(label_to_name)] = 'bg' # Add the background class
